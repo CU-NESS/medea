@@ -46,6 +46,10 @@ if save_basis_in_hdf5
 		write(cfb_group, "Transform_to_kl", cfb.TransInv)
 		write(cfb_group, "Transform_to_map", cfb.Trans)
 		write(cfb_group, "nonmasked_indices", nonempty_indices)
+		
+		cfb_beam_to_kl = cfb.TransInv
+		cfb_kl_to_beam = cfb.Trans
+		
 	end
 end
 
