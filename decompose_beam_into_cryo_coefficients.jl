@@ -24,7 +24,7 @@ hyper_parameter_array = collect(1.0:0.025:3.0)
 npix=nside2npix(nside)
 
 horizon_mask = 
-h5read("/medea/input/horizon_files.hdf5","/"horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside))
+h5read("/medea/input/horizon_files.hdf5","/"*horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside))
 float_mask = convert(AbstractVector{Float64},horizon_mask)
 horizon = HealpixMap{Float64, Healpix.RingOrder}(float_mask)
 horizon = Healpix.udgrade(horizon,nside)
