@@ -9,7 +9,7 @@ medea_env_var = get(ENV, "MEDEA", "default_value_if_not_set")
 horizon_name_str = "flat_horizon"
 coeff_save_filepath = joinpath(medea_env_var, "input", "cryo_coeff_"*horizon_name_str*".hdf5")
 healpy_beam_maps_filepath = joinpath(medea_env_var, "input", "horizontal_dipole_PEC_beam_maps.hdf5")
-basis_filepath = joinpath(medea_env_var, "input","cryo_basis_"*horizon_name_str*".cfb")
+basis_filepath_cfb = joinpath(medea_env_var, "input","cryo_basis_"*horizon_name_str*".cfb")
 basis_filepath_hdf5 = joinpath(medea_env_var,"input","cryo_basis_"*horizon_name_str*".hdf5")
 
 horizon_hdf5_key = "/"*horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside)
@@ -35,11 +35,11 @@ nonempty_indices = findall(>(0), horizon)
 
 horizon[nonempty_indices] .= 1.
 
-if isfile(basis_filepath".cfb")
-	cfb = AngularCryoFaB(cfb_filename)
+if isfile(basis_filepath_cfb)
+	cfb = AngularCryoFaB(basis_filepath_cfb)
 else
 	cfb = AngularCryoFaB(horizon)
-	write(basis_filepath*cfb_filename, cfb)
+	write(basis_filepath_cfb, cfb)
 end
 
 if save_basis_in_hdf5
