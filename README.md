@@ -18,7 +18,7 @@ in 21-cm cosmology. We note also that each mode can be examined to understand th
 full beam topological pattern.
 
 ## Citation
-If you use the algorithms or code contained in LOCHNESS, please cite (Hibbard et al. 2023)
+If you use the algorithms or code contained in MEDEA, please cite (Hibbard et al. 2023)
 
 ## GETTING STARTED:
 It is necessary to have julia installed in order to run the code CryoFaBs to generate the 
@@ -44,7 +44,7 @@ Once you have all the dependencies installed, to clone a copy of the repository:
 ```
 git clone https://github.com/CU-NESS/medea.git
 ```
-Then install the LOCHNESS package via:
+Then install MEDEA package via:
 ```
 cd medea
 python setup.py develop
