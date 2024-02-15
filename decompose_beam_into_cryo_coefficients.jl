@@ -5,10 +5,11 @@ using HDF5
 nside = 32
 prenormalize=true
 save_basis_in_hdf5=true
-coeff_save_filepath = "cryo_coeff_test_flat_horizon"
+horizon_name_str = "flat_horizon"
+coeff_save_filepath = "/medea/input/cryo_coeff_"*horizon_name_str
 healpy_beam_maps_filepath = "test_beam_maps"
-basis_filepath = "cryo_basis_test_flat_horizon"
-basis_filepath_hdf5 = "cryo_basis_test_flat_horizon.hdf5"
+basis_filepath = "/medea/input/cryo_basis_"*horizon_name_str
+basis_filepath_hdf5 = "/medea/input/cryo_basis_"*horizon_name_str*".hdf5"
 
 if prenormalize
 	prenorm_str = "_prenormalized"
@@ -18,11 +19,12 @@ end
 
 frequencies = collect(50:100)
 frequency_indices = collect(1:50)
-hyper_parameter_array = collect(1.0:0.05:3.0)
+hyper_parameter_array = collect(1.0:0.025:3.0)
 
 npix=nside2npix(nside)
 
-horizon_mask = h5read("/medea/input/flat_horizon_nside32.hdf5","/map")
+horizon_mask = 
+h5read("/medea/input/horizon_files.hdf5","/"horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside))
 float_mask = convert(AbstractVector{Float64},horizon_mask)
 horizon = HealpixMap{Float64, Healpix.RingOrder}(float_mask)
 horizon = Healpix.udgrade(horizon,nside)
@@ -55,7 +57,7 @@ end
 for hyper_par in hyper_parameter_array
 	println("Decomposing hyper-parameter "*string(hyper_par))
 	coeff_file =
-		h5open(coeff_save_filepath*"_nside"*string(nside)*"_50_100MHz_"*prenorm_str,"cw")
+		h5open(coeff_save_filepath*healpy_beam_maps_filepath*"_nside"*string(nside)*prenorm_str,"cw")
 				
 	parameter_group = create_group(coeff_file, string(hyper_par))
 	coeff_group = create_group(parameter_group, "coefficients")
