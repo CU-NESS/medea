@@ -10,8 +10,8 @@ horizon_name_str = "flat_horizon"
 beam_name = "horizontal_dipole_PEC"
 coeff_save_filepath = joinpath(medea_env_var, "input", "cryo_coeff_"*horizon_name_str*"_"*beam_name*".hdf5")
 healpy_beam_maps_filepath = joinpath(medea_env_var, "input", beam_name*"_beam_maps.hdf5")
-basis_filepath_cfb = joinpath(medea_env_var, "input","cryo_basis_"*horizon_name_str*".cfb")
-basis_filepath_hdf5 = joinpath(medea_env_var,"input","cryo_basis_"*horizon_name_str*".hdf5")
+basis_filepath_cfb = joinpath(medea_env_var, "input","cryo_basis_"*horizon_name_str*"_nside"*string(nside)*".cfb")
+basis_filepath_hdf5 = joinpath(medea_env_var,"input","cryo_basis_"*horizon_name_str*"_nside"*string(nside)*".hdf5")
 
 horizon_hdf5_key = "/"*horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside)
 
