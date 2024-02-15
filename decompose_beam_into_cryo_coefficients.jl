@@ -5,11 +5,14 @@ using HDF5
 nside = 32
 prenormalize=true
 save_basis_in_hdf5=true
+medea_env_var = get(ENV, "MEDEA", "default_value_if_not_set")
 horizon_name_str = "flat_horizon"
-coeff_save_filepath = "/medea/input/cryo_coeff_"*horizon_name_str
-healpy_beam_maps_filepath = "test_beam_maps"
-basis_filepath = "/medea/input/cryo_basis_"*horizon_name_str
-basis_filepath_hdf5 = "/medea/input/cryo_basis_"*horizon_name_str*".hdf5"
+coeff_save_filepath = joinpath(medea_env_var, "input", "cryo_coeff_"*horizon_name_str*".hdf5")
+healpy_beam_maps_filepath = joinpath(medea_env_var, "input", "horizontal_dipole_PEC_beam_maps.hdf5")
+basis_filepath = joinpath(medea_env_var, "input","cryo_basis_"*horizon_name_str*".cfb")
+basis_filepath_hdf5 = joinpath(medea_env_var,"input","cryo_basis_"*horizon_name_str*".hdf5")
+
+horizon_hdf5_key = "/"*horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside)
 
 if prenormalize
 	prenorm_str = "_prenormalized"
@@ -23,8 +26,7 @@ hyper_parameter_array = collect(1.0:0.025:3.0)
 
 npix=nside2npix(nside)
 
-horizon_mask = 
-h5read("/medea/input/horizon_files.hdf5","/"*horizon_name_str*"_healpy_map_beam_frame_nside_"*string(nside))
+horizon_mask = h5read(joinpath(medea_env_var,"input","horizon_files.hdf5"),horizon_hdf5_key)
 float_mask = convert(AbstractVector{Float64},horizon_mask)
 horizon = HealpixMap{Float64, Healpix.RingOrder}(float_mask)
 horizon = Healpix.udgrade(horizon,nside)
@@ -34,10 +36,10 @@ nonempty_indices = findall(>(0), horizon)
 horizon[nonempty_indices] .= 1.
 
 if isfile(basis_filepath".cfb")
-	cfb = AngularCryoFaB(cfb_filename*".cfb")
+	cfb = AngularCryoFaB(cfb_filename)
 else
 	cfb = AngularCryoFaB(horizon)
-	write(basis_filepath*cfb_filename*".cfb", cfb)
+	write(basis_filepath*cfb_filename, cfb)
 end
 
 if save_basis_in_hdf5
