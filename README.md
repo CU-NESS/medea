@@ -49,6 +49,28 @@ Then install MEDEA package via:
 cd medea
 python setup.py develop
 ```
+You can download Cryo-bases and horizon profiles for common 21-cm experiments at the following link:
+
+https://zenodo.org/records/10674421?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjRmZTUyMjdiLTU1OGMtNDE0My1hNTc5LWYzZGM0MGNmMzQ3NCIsImRhdGEiOnt9LCJyYW5kb20iOiI1NzNmZjQwNTQwOTMyYjI0ZTdhMmM0OWNhYTA4NDE3MiJ9.q55GHEb3KbN4EJA8xeYvlVIA2r6yo9gcb5OOdJcreasfuxoPrmT8xi9W3bU_f0NbzY-Q3Fq6BXmBTRw7Ob0YCQ
+
+The above link also contains an example file containing beam maps for the 
+Analytical Dipole used in the above work. It is labeled as 
+"horizontal_dipole_PEC_beam_maps.hdf5".
+
+After downloading the necessary horizon files and Cryo-bases, a user can quickly generate
+Cryo-coefficients using the example julia script provided:
+```
+julia decompose_beam_into_cryo_coefficients.jl
+```
+This will generate Cryo-coefficients for the Analytical Dipole at various hyper-parameters.
+
+Lastly, to use the BeamEmulator class itself, another example script is provided which takes
+the above Cryo-coefficients and Cryo-basis, and produces a new Analytical Dipole beam at 
+arbitrary beam hyper-parameters between the input values of 1 and 3 meters. Simply run the script
+```
+python Run_MEDEA.py
+```
+to produce a new beam pattern. 
 
 
 ## Contributors
