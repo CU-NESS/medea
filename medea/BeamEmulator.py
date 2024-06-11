@@ -12,9 +12,9 @@ Description: Object which takes an input set of beams (analytical
 			 between values within the input set. 
 """
 import numpy as np
-import h5py
-from scipy.interpolate import make_interp_spline, interp1d
+from scipy.interpolate import make_interp_spline
 import healpy as hp
+from scipy.interpolate import RegularGridInterpolator
 try:
 	from sklearn.gaussian_process import GaussianProcessRegressor
 	from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic
@@ -49,7 +49,8 @@ class BeamEmulator(object):
 						   dipole above a ground plane.
 						   NOTE: only spline interpolation is supported for multi-dimensional
 						   hyper-parameter interpolation.
-		hyper_parameter_array: An ND-array containing the hyper-parameters of the input beam set,
+		hyper_parameter_array: Either a 1D array containing the monotonically increasing 
+							   hyper-parameters of the input beam set, or an ND-array, for N>1,
 							   where N denotes the number of hyper-parameters to interpolate over.
 							   Each axis corresponds to a separate set of hyper-parameters,
 							   increasing monotonically. If GPR interpolation is used, 
@@ -102,56 +103,87 @@ class BeamEmulator(object):
 			reshaped_coeff = np.reshape(self.cryo_coefficients,\
 				(self.hyper_parameter_array.shape[0],-1))
 			if self.use_gpr:
-				print('Using Gaussian Process Regression for interpolation...')
-				desired_kernel = self.gpr_kwargs['kernel']
-				if desired_kernel == 'RBF':
-					kernel = 1 * RBF()
-				elif desired_kernel == 'Matern_2_5':
-					kernel = 1.0 * Matern(length_scale=1.0, nu=2.5)
-				elif desired_kernel == 'Matern_1_5':
-					kernel = 1.0 * Matern(length_scale=1.0, nu=1.5)
-				elif desired_kernel == 'RQ':
-					kernel = 1.0 * RationalQuadratic(length_scale=1.0, alpha=1.5)
-					
-				estimator = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20,\
-					normalize_y=self.gpr_kwargs['normalize_y'])
-				
-				if self.gpr_kwargs['regressor'] == 'MultiOutput':
-					regr = MultiOutputRegressor(estimator,\
-						n_jobs=-1).fit(self.hyper_parameter_array.reshape(-1, 1), \
-						reshaped_coeff)
+				if self.hyper_parameter_shape[0] != 1:
+					print('GPR for multi-dimensional hyper-parameter grids not supported!')
+				else:
+					print('Using Gaussian Process Regression for interpolation...')
+					desired_kernel = self.gpr_kwargs['kernel']
+					if desired_kernel == 'RBF':
+						kernel = 1 * RBF()
+					elif desired_kernel == 'Matern_2_5':
+						kernel = 1.0 * Matern(length_scale=1.0, nu=2.5)
+					elif desired_kernel == 'Matern_1_5':
+						kernel = 1.0 * Matern(length_scale=1.0, nu=1.5)
+					elif desired_kernel == 'RQ':
+						kernel = 1.0 * RationalQuadratic(length_scale=1.0, alpha=1.5)
 						
-				elif self.gpr_kwargs['regressor'] == 'RegressorChain':
-					regr = RegressorChain(estimator).fit(self.hyper_parameter_array.reshape(-1, 1), \
-						reshaped_coeff)
+					estimator = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20,\
+						normalize_y=self.gpr_kwargs['normalize_y'])
+					
+					if self.gpr_kwargs['regressor'] == 'MultiOutput':
+						regr = MultiOutputRegressor(estimator,\
+							n_jobs=-1).fit(self.hyper_parameter_array.reshape(-1, 1), \
+							reshaped_coeff)
+							
+					elif self.gpr_kwargs['regressor'] == 'RegressorChain':
+						regr = RegressorChain(estimator).fit(self.hyper_parameter_array.reshape(-1, 1), \
+							reshaped_coeff)
 
-				all_estimator_hyper_parameters = []
-				all_estimator_log_marginal_likelihoods = []
-				
-				for estimator in regr.estimators_:
-					all_estimator_hyper_parameters.append(estimator.kernel_.get_params())
-					all_estimator_log_marginal_likelihoods.append(estimator.log_marginal_likelihood())
+					all_estimator_hyper_parameters = []
+					all_estimator_log_marginal_likelihoods = []
 					
-				self.estimator_log_marginal_likelihoods = np.array(all_estimator_log_marginal_likelihoods)
-				self.estimator_hyper_parameters = all_estimator_hyper_parameters
+					for estimator in regr.estimators_:
+						all_estimator_hyper_parameters.append(estimator.kernel_.get_params())
+						all_estimator_log_marginal_likelihoods.append(estimator.log_marginal_likelihood())
+						
+					self.estimator_log_marginal_likelihoods = \
+						np.array(all_estimator_log_marginal_likelihoods)
+					self.estimator_hyper_parameters = \
+						all_estimator_hyper_parameters
+						
+					self.gpr_score_of_training_set = \
+						regr.score(self.hyper_parameter_array.reshape(-1, 1), \
+						reshaped_coeff)
 					
-				self.gpr_score_of_training_set = regr.score(self.hyper_parameter_array.reshape(-1, 1), \
-					reshaped_coeff)
-				
-				self._hyper_parameter_interpolater = regr
+					self._hyper_parameter_interpolater = regr
 		
 			else:
 				print('Using splines for interpolation...')
-				self._hyper_parameter_interpolater = \
-					make_interp_spline(self.hyper_parameter_array, self.cryo_coefficients, \
-					k=self.interpolation_order)
+				if self.hyper_parameter_array.ndim == 1:
+					self._hyper_parameter_interpolater = \
+						make_interp_spline(self.hyper_parameter_array, self.cryo_coefficients, \
+						k=self.interpolation_order)
+				else:
+					init = (self.hyper_parameter_array[0],)
+					init_list = list(init)
+					for ipar in self.hyper_parameter_array[1:,:]:
+						init_list.append(ipar)
+					ND_hyper_par_tuple = tuple(init_list)
+					
+					if self.interpolation_order == 3:
+						method='cubic'
+					elif self.interpolation_order == 5:
+						method='quintic'
+					else:
+						print('Only cubic and quintic interpolation orders supported'+\
+							'for N>1 hyper-parameter grids!')
+					
+					self._hyper_parameter_interpolater = \
+						RegularGridInterpolator(ND_hyper_par_tuple,\
+						self.cryo_coefficients, method=method)
+	
 				predicted_outputs = \
 					self._hyper_parameter_interpolater(self.hyper_parameter_array)
-				predicted_outputs = np.reshape(predicted_outputs, (self.hyper_parameter_array.shape[0],-1))
+				predicted_outputs = np.reshape(predicted_outputs, \
+					(self.hyper_parameter_array.shape[0],-1))
 				try:
 					from sklearn.metrics import r2_score
-					self.spline_score_of_training_set = r2_score(reshaped_coeff, predicted_outputs,\
+					self.spline_score_of_training_set = \
+						r2_score(reshaped_coeff, predicted_outputs,\
 						multioutput='uniform_average')
+				except:
+					raise ImportError('Install sklearn to use r2 score statistics!')
+
 		return self._hyper_parameter_interpolater
 		
 	def coefficient_predicter(self, inputs):
@@ -207,15 +239,16 @@ class BeamEmulator(object):
 	@property
 	def cryo_basis_kl_to_beam(self):
 		if not hasattr(self, '_cryo_basis_kl_to_beam'):
-			self._cryo_basis_kl_to_beam = self.cryo_basis.T
+			self._cryo_basis_kl_to_beam = self.cryobasis.T
 			self._cryo_basis_kl_to_beam = self._cryo_basis_kl_to_beam[:,:self.coefficient_order]
 		return self._cryo_basis_kl_to_beam
 		
 	@cryo_basis_kl_to_beam.setter
 	def cryo_basis_kl_to_beam(self, value):
 		self._cryo_basis_kl_to_beam = value
-		
-	@cryo_basis_beam_to_kl(self):
+	
+	@property
+	def cryo_basis_beam_to_kl(self):
 		if not hasattr(self, '_cryo_basis_beam_to_kl'):
 			no_truncation_basis = self.cryo_basis.T
 			self._cryo_basis_beam_to_kl = \
@@ -224,7 +257,7 @@ class BeamEmulator(object):
 				self._cryo_basis_beam_to_kl[:,:self.coefficient_order]
 		return self._cryo_basis_beam_to_kl
 		
-	@cryo_basis_beam_to_kl.setter:
+	@cryo_basis_beam_to_kl.setter
 	def cryo_basis_beam_to_kl(self,value):
 		self._cryo_basis_beam_to_kl = value		
 	
